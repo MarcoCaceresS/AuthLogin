@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using AuthService.Common;
 using AuthService.Features.Cuadrilla;
 using AuthService.Security;
@@ -17,18 +16,28 @@ public static class AdminEndpoints
             .AddEndpointFilter(RequireActiveSession);
 
         group.MapPost("/", async (CrearUsuarioRequest body, UserAdminService admin, CancellationToken ct) =>
-        {
-            var result = await admin.CreateAsync(body, ct);
-            return result.Value is { } created
-                ? Results.Created((string?)null, created)
-                : ApiErrors.Result(result.ErrorCode!, result.Mensaje);
-        });
+            ToHttp(await admin.CreateAsync(body, ct), created => Results.Created((string?)null, created)));
 
         group.MapGet("/", async (bool? activo, string? rol, UserAdminService admin, CancellationToken ct) =>
             Results.Ok(await admin.ListAsync(activo, rol, ct)));
 
+        group.MapPatch("/{id:guid}/estado", async (Guid id, CambiarEstadoRequest body, UserAdminService admin, CancellationToken ct) =>
+            ToHttp(await admin.SetActiveAsync(id, body.Activo, ct), Results.Ok));
+
+        group.MapPost("/{id:guid}/clave", async (Guid id, ResetClaveRequest body, UserAdminService admin, CancellationToken ct) =>
+            ToHttp(await admin.ResetPasswordAsync(id, body.Password, ct), _ => Results.NoContent()));
+
+        group.MapGet("/{id:guid}/ingresos", async (Guid id, UserAdminService admin, CancellationToken ct) =>
+            ToHttp(await admin.LoginHistoryAsync(id, ct), Results.Ok));
+
         return app;
     }
+
+    private static IResult ToHttp<T>(AdminResult<T> result, Func<T, IResult> ok) =>
+        result.ErrorCode is null
+            ? ok(result.Value!)
+            : ApiErrors.Result(result.ErrorCode,
+                result.Mensaje ?? (result.ErrorCode == ErrorCodes.SinPermiso ? SinPermisoMensaje : null));
 
     /// <summary>
     /// Las acciones de admin revisan en la base, en cada request, que la sesión siga abierta
@@ -44,6 +53,4 @@ public static class AdminEndpoints
 
         return await next(ctx);
     }
-
-    public static Guid CurrentUserId(ClaimsPrincipal user) => Guid.Parse(user.FindFirstValue("sub")!);
 }

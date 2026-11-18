@@ -71,6 +71,79 @@ public sealed class UserAdminService(AuthDbContext db, IPasswordHasher<User> has
         return users.Select(ToOut).ToList();
     }
 
+    public async Task<AdminResult<UsuarioOut>> SetActiveAsync(Guid id, bool? activo, CancellationToken ct)
+    {
+        if (activo is null)
+            return Invalid("Indica si el usuario queda activo o inactivo.");
+
+        var (user, error) = await FindManageableAsync(id, ct);
+        if (user is null)
+            return AdminResult<UsuarioOut>.Fail(error!);
+
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        user.IsActive = activo.Value;
+        await db.SaveChangesAsync(ct);
+        if (!activo.Value)
+            await RevokeAllSessionsAsync(user.Id, ct);
+        await tx.CommitAsync(ct);
+
+        return AdminResult<UsuarioOut>.Ok(ToOut(user));
+    }
+
+    public async Task<AdminResult<bool>> ResetPasswordAsync(Guid id, string? password, CancellationToken ct)
+    {
+        if (PasswordRules.Validate(password) is { } problema)
+            return AdminResult<bool>.Fail(ErrorCodes.DatosInvalidos, problema);
+
+        var (user, error) = await FindManageableAsync(id, ct);
+        if (user is null)
+            return AdminResult<bool>.Fail(error!);
+
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        user.PasswordHash = hasher.HashPassword(user, password!);
+        await db.SaveChangesAsync(ct);
+        await RevokeAllSessionsAsync(user.Id, ct);
+        await tx.CommitAsync(ct);
+
+        return AdminResult<bool>.Ok(true);
+    }
+
+    public async Task<AdminResult<IReadOnlyList<IngresoOut>>> LoginHistoryAsync(Guid id, CancellationToken ct)
+    {
+        if (!await db.Users.AnyAsync(u => u.Id == id, ct))
+            return AdminResult<IReadOnlyList<IngresoOut>>.Fail(ErrorCodes.UsuarioNoEncontrado);
+
+        var items = await db.LoginRecords
+            .Where(r => r.UserId == id)
+            .OrderByDescending(r => r.OccurredAt).ThenByDescending(r => r.Id)
+            .Take(HistoryLimit)
+            .Select(r => new IngresoOut(r.OccurredAt, r.IpAddress, r.UserAgent))
+            .ToListAsync(ct);
+
+        return AdminResult<IReadOnlyList<IngresoOut>>.Ok(items);
+    }
+
+    public const int HistoryLimit = 100;
+
+    /// <summary>Un superadmin (incluido uno mismo) no se gestiona desde aquí: evita quedar sin admin.</summary>
+    private async Task<(User? User, string? Error)> FindManageableAsync(Guid id, CancellationToken ct)
+    {
+        var user = await db.Users.Include(u => u.Role).SingleOrDefaultAsync(u => u.Id == id, ct);
+        if (user is null)
+            return (null, ErrorCodes.UsuarioNoEncontrado);
+        if (user.Role.Name == RoleNames.Superadmin)
+            return (null, ErrorCodes.SinPermiso);
+        return (user, null);
+    }
+
+    private Task RevokeAllSessionsAsync(Guid userId, CancellationToken ct)
+    {
+        var now = time.GetUtcNow();
+        return db.UserSessions
+            .Where(s => s.UserId == userId && s.RevokedAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.RevokedAt, now), ct);
+    }
+
     private static UsuarioOut ToOut(User u) =>
         new(u.Id, u.Email, u.FirstName, u.LastName, u.Role.Name, u.IsActive, u.CreatedAt);
 
