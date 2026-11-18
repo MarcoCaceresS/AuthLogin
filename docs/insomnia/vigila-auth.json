@@ -1,0 +1,471 @@
+{
+    "_type":  "export",
+    "__export_format":  4,
+    "__export_source":  "vigila-authservice",
+    "resources":  [
+                      {
+                          "_id":  "wrk_vigila_auth",
+                          "_type":  "workspace",
+                          "parentId":  null,
+                          "name":  "Vigila AuthService",
+                          "scope":  "collection",
+                          "description":  "Flujo de sesión de funcionarios y gestión admin. Ejecutar primero los requests de login de cada carpeta."
+                      },
+                      {
+                          "_id":  "env_base",
+                          "_type":  "environment",
+                          "parentId":  "wrk_vigila_auth",
+                          "name":  "Base Environment",
+                          "data":  {
+                                       "base_url":  "http://localhost:8080",
+                                       "api":  "http://localhost:8080/api/v1"
+                                   }
+                      },
+                      {
+                          "_id":  "req_health",
+                          "_type":  "request",
+                          "parentId":  "wrk_vigila_auth",
+                          "metaSortKey":  0,
+                          "name":  "Health",
+                          "method":  "GET",
+                          "url":  "{{ _.base_url }}/health",
+                          "description":  "",
+                          "headers":  [
+
+                                      ],
+                          "body":  {
+
+                                   },
+                          "authentication":  {
+
+                                             }
+                      },
+                      {
+                          "_id":  "fld_sesion",
+                          "_type":  "request_group",
+                          "parentId":  "wrk_vigila_auth",
+                          "name":  "1. Flujo de sesión",
+                          "metaSortKey":  1
+                      },
+                      {
+                          "_id":  "req_login_func",
+                          "_type":  "request",
+                          "parentId":  "fld_sesion",
+                          "metaSortKey":  1,
+                          "name":  "1. Login funcionario",
+                          "method":  "POST",
+                          "url":  "{{ _.api }}/cuadrilla/login",
+                          "description":  "Esperado: 200 con access_token y expira_en_segundos 604800.",
+                          "headers":  [
+                                          {
+                                              "name":  "Content-Type",
+                                              "value":  "application/json"
+                                          }
+                                      ],
+                          "body":  {
+                                       "mimeType":  "application/json",
+                                       "text":  "{\"email\": \"funcionario@victoria.cl\", \"password\": \"demo-dev-1234\"}"
+                                   },
+                          "authentication":  {
+
+                                             }
+                      },
+                      {
+                          "_id":  "req_renovar",
+                          "_type":  "request",
+                          "parentId":  "fld_sesion",
+                          "metaSortKey":  2,
+                          "name":  "2. Renovar sesión",
+                          "method":  "POST",
+                          "url":  "{{ _.api }}/cuadrilla/sesion/renovar",
+                          "description":  "Esperado: 200 con token nuevo (otro jti) válido 7 días desde ahora.",
+                          "headers":  [
+
+                                      ],
+                          "body":  {
+
+                                   },
+                          "authentication":  {
+                                                 "type":  "bearer",
+                                                 "token":  "{% response \u0027body\u0027, \u0027req_login_func\u0027, \u0027b64::JC5hY2Nlc3NfdG9rZW4=::46b\u0027, \u0027never\u0027, 60 %}",
+                                                 "prefix":  "Bearer"
+                                             }
+                      },
+                      {
+                          "_id":  "req_logout",
+                          "_type":  "request",
+                          "parentId":  "fld_sesion",
+                          "metaSortKey":  3,
+                          "name":  "3. Logout",
+                          "method":  "POST",
+                          "url":  "{{ _.api }}/cuadrilla/logout",
+                          "description":  "Esperado: 204. Repetirlo también da 204.",
+                          "headers":  [
+
+                                      ],
+                          "body":  {
+
+                                   },
+                          "authentication":  {
+                                                 "type":  "bearer",
+                                                 "token":  "{% response \u0027body\u0027, \u0027req_login_func\u0027, \u0027b64::JC5hY2Nlc3NfdG9rZW4=::46b\u0027, \u0027never\u0027, 60 %}",
+                                                 "prefix":  "Bearer"
+                                             }
+                      },
+                      {
+                          "_id":  "req_renovar_revocado",
+                          "_type":  "request",
+                          "parentId":  "fld_sesion",
+                          "metaSortKey":  4,
+                          "name":  "4. Renovar tras logout",
+                          "method":  "POST",
+                          "url":  "{{ _.api }}/cuadrilla/sesion/renovar",
+                          "description":  "Esperado: 401 no_autenticado (la sesión quedó revocada).",
+                          "headers":  [
+
+                                      ],
+                          "body":  {
+
+                                   },
+                          "authentication":  {
+                                                 "type":  "bearer",
+                                                 "token":  "{% response \u0027body\u0027, \u0027req_login_func\u0027, \u0027b64::JC5hY2Nlc3NfdG9rZW4=::46b\u0027, \u0027never\u0027, 60 %}",
+                                                 "prefix":  "Bearer"
+                                             }
+                      },
+                      {
+                          "_id":  "fld_admin",
+                          "_type":  "request_group",
+                          "parentId":  "wrk_vigila_auth",
+                          "name":  "2. Admin",
+                          "metaSortKey":  2
+                      },
+                      {
+                          "_id":  "req_login_admin",
+                          "_type":  "request",
+                          "parentId":  "fld_admin",
+                          "metaSortKey":  1,
+                          "name":  "1. Login superadmin",
+                          "method":  "POST",
+                          "url":  "{{ _.api }}/cuadrilla/login",
+                          "description":  "Esperado: 200 con rol superadmin.",
+                          "headers":  [
+                                          {
+                                              "name":  "Content-Type",
+                                              "value":  "application/json"
+                                          }
+                                      ],
+                          "body":  {
+                                       "mimeType":  "application/json",
+                                       "text":  "{\"email\": \"admin@victoria.cl\", \"password\": \"admin-dev-1234\"}"
+                                   },
+                          "authentication":  {
+
+                                             }
+                      },
+                      {
+                          "_id":  "req_admin_crear",
+                          "_type":  "request",
+                          "parentId":  "fld_admin",
+                          "metaSortKey":  2,
+                          "name":  "2. Crear funcionario",
+                          "method":  "POST",
+                          "url":  "{{ _.api }}/admin/usuarios",
+                          "description":  "Esperado: 201. Los requests siguientes usan el id de esta respuesta.",
+                          "headers":  [
+                                          {
+                                              "name":  "Content-Type",
+                                              "value":  "application/json"
+                                          }
+                                      ],
+                          "body":  {
+                                       "mimeType":  "application/json",
+                                       "text":  "{\"email\": \"funcionario.{% uuid \u0027v4\u0027 %}@victoria.cl\", \"password\": \"clave-nueva-123\", \"nombre\": \"Juan\", \"apellido\": \"Soto\", \"rol\": \"funcionario\"}"
+                                   },
+                          "authentication":  {
+                                                 "type":  "bearer",
+                                                 "token":  "{% response \u0027body\u0027, \u0027req_login_admin\u0027, \u0027b64::JC5hY2Nlc3NfdG9rZW4=::46b\u0027, \u0027never\u0027, 60 %}",
+                                                 "prefix":  "Bearer"
+                                             }
+                      },
+                      {
+                          "_id":  "req_admin_listar",
+                          "_type":  "request",
+                          "parentId":  "fld_admin",
+                          "metaSortKey":  3,
+                          "name":  "3. Listar funcionarios activos",
+                          "method":  "GET",
+                          "url":  "{{ _.api }}/admin/usuarios?activo=true\u0026rol=funcionario",
+                          "description":  "Esperado: 200 con la lista.",
+                          "headers":  [
+
+                                      ],
+                          "body":  {
+
+                                   },
+                          "authentication":  {
+                                                 "type":  "bearer",
+                                                 "token":  "{% response \u0027body\u0027, \u0027req_login_admin\u0027, \u0027b64::JC5hY2Nlc3NfdG9rZW4=::46b\u0027, \u0027never\u0027, 60 %}",
+                                                 "prefix":  "Bearer"
+                                             }
+                      },
+                      {
+                          "_id":  "req_admin_ingresos",
+                          "_type":  "request",
+                          "parentId":  "fld_admin",
+                          "metaSortKey":  4,
+                          "name":  "4. Historial de ingresos",
+                          "method":  "GET",
+                          "url":  "{{ _.api }}/admin/usuarios/{% response \u0027body\u0027, \u0027req_admin_crear\u0027, \u0027b64::JC5pZA==::46b\u0027, \u0027never\u0027, 60 %}/ingresos",
+                          "description":  "Esperado: 200. Vacío hasta que el funcionario inicie sesión.",
+                          "headers":  [
+
+                                      ],
+                          "body":  {
+
+                                   },
+                          "authentication":  {
+                                                 "type":  "bearer",
+                                                 "token":  "{% response \u0027body\u0027, \u0027req_login_admin\u0027, \u0027b64::JC5hY2Nlc3NfdG9rZW4=::46b\u0027, \u0027never\u0027, 60 %}",
+                                                 "prefix":  "Bearer"
+                                             }
+                      },
+                      {
+                          "_id":  "req_admin_clave",
+                          "_type":  "request",
+                          "parentId":  "fld_admin",
+                          "metaSortKey":  5,
+                          "name":  "5. Resetear clave",
+                          "method":  "POST",
+                          "url":  "{{ _.api }}/admin/usuarios/{% response \u0027body\u0027, \u0027req_admin_crear\u0027, \u0027b64::JC5pZA==::46b\u0027, \u0027never\u0027, 60 %}/clave",
+                          "description":  "Esperado: 204. Revoca las sesiones del funcionario.",
+                          "headers":  [
+                                          {
+                                              "name":  "Content-Type",
+                                              "value":  "application/json"
+                                          }
+                                      ],
+                          "body":  {
+                                       "mimeType":  "application/json",
+                                       "text":  "{\"password\": \"otra-clave-456\"}"
+                                   },
+                          "authentication":  {
+                                                 "type":  "bearer",
+                                                 "token":  "{% response \u0027body\u0027, \u0027req_login_admin\u0027, \u0027b64::JC5hY2Nlc3NfdG9rZW4=::46b\u0027, \u0027never\u0027, 60 %}",
+                                                 "prefix":  "Bearer"
+                                             }
+                      },
+                      {
+                          "_id":  "req_admin_desactivar",
+                          "_type":  "request",
+                          "parentId":  "fld_admin",
+                          "metaSortKey":  6,
+                          "name":  "6. Desactivar",
+                          "method":  "PATCH",
+                          "url":  "{{ _.api }}/admin/usuarios/{% response \u0027body\u0027, \u0027req_admin_crear\u0027, \u0027b64::JC5pZA==::46b\u0027, \u0027never\u0027, 60 %}/estado",
+                          "description":  "Esperado: 200 con activo false. Revoca sus sesiones; su login da 401.",
+                          "headers":  [
+                                          {
+                                              "name":  "Content-Type",
+                                              "value":  "application/json"
+                                          }
+                                      ],
+                          "body":  {
+                                       "mimeType":  "application/json",
+                                       "text":  "{\"activo\": false}"
+                                   },
+                          "authentication":  {
+                                                 "type":  "bearer",
+                                                 "token":  "{% response \u0027body\u0027, \u0027req_login_admin\u0027, \u0027b64::JC5hY2Nlc3NfdG9rZW4=::46b\u0027, \u0027never\u0027, 60 %}",
+                                                 "prefix":  "Bearer"
+                                             }
+                      },
+                      {
+                          "_id":  "req_admin_reactivar",
+                          "_type":  "request",
+                          "parentId":  "fld_admin",
+                          "metaSortKey":  7,
+                          "name":  "7. Reactivar",
+                          "method":  "PATCH",
+                          "url":  "{{ _.api }}/admin/usuarios/{% response \u0027body\u0027, \u0027req_admin_crear\u0027, \u0027b64::JC5pZA==::46b\u0027, \u0027never\u0027, 60 %}/estado",
+                          "description":  "Esperado: 200 con activo true.",
+                          "headers":  [
+                                          {
+                                              "name":  "Content-Type",
+                                              "value":  "application/json"
+                                          }
+                                      ],
+                          "body":  {
+                                       "mimeType":  "application/json",
+                                       "text":  "{\"activo\": true}"
+                                   },
+                          "authentication":  {
+                                                 "type":  "bearer",
+                                                 "token":  "{% response \u0027body\u0027, \u0027req_login_admin\u0027, \u0027b64::JC5hY2Nlc3NfdG9rZW4=::46b\u0027, \u0027never\u0027, 60 %}",
+                                                 "prefix":  "Bearer"
+                                             }
+                      },
+                      {
+                          "_id":  "fld_errores",
+                          "_type":  "request_group",
+                          "parentId":  "wrk_vigila_auth",
+                          "name":  "3. Errores",
+                          "metaSortKey":  3
+                      },
+                      {
+                          "_id":  "req_err_clave",
+                          "_type":  "request",
+                          "parentId":  "fld_errores",
+                          "metaSortKey":  1,
+                          "name":  "Clave incorrecta",
+                          "method":  "POST",
+                          "url":  "{{ _.api }}/cuadrilla/login",
+                          "description":  "Esperado: 401 credenciales_invalidas.",
+                          "headers":  [
+                                          {
+                                              "name":  "Content-Type",
+                                              "value":  "application/json"
+                                          }
+                                      ],
+                          "body":  {
+                                       "mimeType":  "application/json",
+                                       "text":  "{\"email\": \"funcionario@victoria.cl\", \"password\": \"incorrecta\"}"
+                                   },
+                          "authentication":  {
+
+                                             }
+                      },
+                      {
+                          "_id":  "req_err_vecino",
+                          "_type":  "request",
+                          "parentId":  "fld_errores",
+                          "metaSortKey":  2,
+                          "name":  "Vecino",
+                          "method":  "POST",
+                          "url":  "{{ _.api }}/cuadrilla/login",
+                          "description":  "Esperado: 403 sin_permiso.",
+                          "headers":  [
+                                          {
+                                              "name":  "Content-Type",
+                                              "value":  "application/json"
+                                          }
+                                      ],
+                          "body":  {
+                                       "mimeType":  "application/json",
+                                       "text":  "{\"email\": \"vecino@victoria.cl\", \"password\": \"demo-dev-1234\"}"
+                                   },
+                          "authentication":  {
+
+                                             }
+                      },
+                      {
+                          "_id":  "req_err_inactivo",
+                          "_type":  "request",
+                          "parentId":  "fld_errores",
+                          "metaSortKey":  3,
+                          "name":  "Cuenta inactiva",
+                          "method":  "POST",
+                          "url":  "{{ _.api }}/cuadrilla/login",
+                          "description":  "Esperado: 401 credenciales_invalidas.",
+                          "headers":  [
+                                          {
+                                              "name":  "Content-Type",
+                                              "value":  "application/json"
+                                          }
+                                      ],
+                          "body":  {
+                                       "mimeType":  "application/json",
+                                       "text":  "{\"email\": \"inactivo@victoria.cl\", \"password\": \"demo-dev-1234\"}"
+                                   },
+                          "authentication":  {
+
+                                             }
+                      },
+                      {
+                          "_id":  "req_err_sinverificar",
+                          "_type":  "request",
+                          "parentId":  "fld_errores",
+                          "metaSortKey":  4,
+                          "name":  "Email sin verificar",
+                          "method":  "POST",
+                          "url":  "{{ _.api }}/cuadrilla/login",
+                          "description":  "Esperado: 401 credenciales_invalidas.",
+                          "headers":  [
+                                          {
+                                              "name":  "Content-Type",
+                                              "value":  "application/json"
+                                          }
+                                      ],
+                          "body":  {
+                                       "mimeType":  "application/json",
+                                       "text":  "{\"email\": \"sinverificar@victoria.cl\", \"password\": \"demo-dev-1234\"}"
+                                   },
+                          "authentication":  {
+
+                                             }
+                      },
+                      {
+                          "_id":  "req_err_datos",
+                          "_type":  "request",
+                          "parentId":  "fld_errores",
+                          "metaSortKey":  5,
+                          "name":  "Datos incompletos",
+                          "method":  "POST",
+                          "url":  "{{ _.api }}/cuadrilla/login",
+                          "description":  "Esperado: 422 datos_invalidos.",
+                          "headers":  [
+                                          {
+                                              "name":  "Content-Type",
+                                              "value":  "application/json"
+                                          }
+                                      ],
+                          "body":  {
+                                       "mimeType":  "application/json",
+                                       "text":  "{\"email\": \"funcionario@victoria.cl\"}"
+                                   },
+                          "authentication":  {
+
+                                             }
+                      },
+                      {
+                          "_id":  "req_err_sintoken",
+                          "_type":  "request",
+                          "parentId":  "fld_errores",
+                          "metaSortKey":  6,
+                          "name":  "Renovar sin token",
+                          "method":  "POST",
+                          "url":  "{{ _.api }}/cuadrilla/sesion/renovar",
+                          "description":  "Esperado: 401 no_autenticado.",
+                          "headers":  [
+
+                                      ],
+                          "body":  {
+
+                                   },
+                          "authentication":  {
+
+                                             }
+                      },
+                      {
+                          "_id":  "req_err_func_admin",
+                          "_type":  "request",
+                          "parentId":  "fld_errores",
+                          "metaSortKey":  7,
+                          "name":  "Funcionario en ruta admin",
+                          "method":  "GET",
+                          "url":  "{{ _.api }}/admin/usuarios",
+                          "description":  "Ejecutar antes \"1. Login funcionario\". Esperado: 403 sin_permiso.",
+                          "headers":  [
+
+                                      ],
+                          "body":  {
+
+                                   },
+                          "authentication":  {
+                                                 "type":  "bearer",
+                                                 "token":  "{% response \u0027body\u0027, \u0027req_login_func\u0027, \u0027b64::JC5hY2Nlc3NfdG9rZW4=::46b\u0027, \u0027never\u0027, 60 %}",
+                                                 "prefix":  "Bearer"
+                                             }
+                      }
+                  ]
+}
