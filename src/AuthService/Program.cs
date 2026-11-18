@@ -2,6 +2,7 @@ using System.Text.Json;
 using AuthService.Common;
 using AuthService.Data;
 using AuthService.Domain;
+using AuthService.Features.Admin;
 using AuthService.Features.Cuadrilla;
 using AuthService.Security;
 using Microsoft.AspNetCore.Diagnostics;
@@ -16,6 +17,7 @@ builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddSingleton<TokenIssuer>();
 builder.Services.AddSingleton<TokenReader>();
 builder.Services.AddScoped<SessionService>();
+builder.Services.AddScoped<UserAdminService>();
 builder.Services.AddFuncionarioAuth();
 // Body ausente o JSON inválido lanza BadHttpRequestException en todo ambiente → 422 datos_invalidos.
 builder.Services.Configure<RouteHandlerOptions>(o => o.ThrowOnBadRequest = true);
@@ -40,6 +42,7 @@ app.UseAuthorization();
 
 app.MapHealthChecks("/health");
 app.MapCuadrilla();
+app.MapAdmin();
 
 await DevSeeder.RunAtStartupAsync(app.Services, app.Configuration);
 

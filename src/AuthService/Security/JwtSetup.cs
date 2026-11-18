@@ -1,5 +1,6 @@
 using AuthService.Common;
 using AuthService.Domain;
+using AuthService.Features.Admin;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -41,14 +42,18 @@ public static class JwtSetup
                             : ErrorCodes.NoAutenticado;
                         return ApiErrors.WriteAsync(ctx.HttpContext, codigo);
                     },
-                    OnForbidden = ctx => ApiErrors.WriteAsync(ctx.HttpContext, ErrorCodes.SinPermiso),
+                    OnForbidden = ctx => ApiErrors.WriteAsync(ctx.HttpContext, ErrorCodes.SinPermiso,
+                        ctx.Request.Path.StartsWithSegments(AdminEndpoints.Prefix) ? AdminEndpoints.SinPermisoMensaje : null),
                 };
             });
 
         services.AddAuthorizationBuilder()
             .AddPolicy(FuncionarioPolicy, p => p
                 .RequireAuthenticatedUser()
-                .RequireAssertion(ctx => RoleNames.AppFuncionarios.Contains(ctx.User.FindFirst(TokenIssuer.RolClaim)?.Value ?? "")));
+                .RequireAssertion(ctx => RoleNames.AppFuncionarios.Contains(ctx.User.FindFirst(TokenIssuer.RolClaim)?.Value ?? "")))
+            .AddPolicy(AdminPolicy, p => p
+                .RequireAuthenticatedUser()
+                .RequireClaim(TokenIssuer.RolClaim, RoleNames.Superadmin));
 
         return services;
     }

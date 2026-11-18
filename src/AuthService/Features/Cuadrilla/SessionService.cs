@@ -91,6 +91,13 @@ public sealed class SessionService(
         return new SessionResult(ToResponse(user, token), null);
     }
 
+    public Task<bool> IsSessionActiveAsync(Guid userId, Guid sessionId, CancellationToken ct)
+    {
+        var now = time.GetUtcNow();
+        return db.UserSessions.AnyAsync(s =>
+            s.Id == sessionId && s.UserId == userId && s.RevokedAt == null && s.ExpiresAt > now && s.User.IsActive, ct);
+    }
+
     /// <summary>Revoca la sesión. Idempotente: revocar dos veces no cambia la fecha.</summary>
     public Task LogoutAsync(Guid sessionId, CancellationToken ct)
     {
