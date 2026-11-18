@@ -13,4 +13,8 @@ public sealed class User
 
     public int RoleId { get; set; }
     public Role Role { get; set; } = null!;
+
+    public string FullName => $"{FirstName} {LastName}";
+
+    public static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
 }

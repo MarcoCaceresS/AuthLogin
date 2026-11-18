@@ -17,8 +17,7 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     public async Task InitializeAsync()
     {
         await _db.StartAsync();
-        using var scope = Services.CreateScope();
-        await scope.ServiceProvider.GetRequiredService<AuthDbContext>().Database.MigrateAsync();
+        _ = Services; // arranca el host: Program migra la base al iniciar
     }
 
     public new async Task DisposeAsync()
@@ -32,6 +31,7 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:Auth", _db.GetConnectionString());
         builder.UseSetting("VIGILA_JWT_SECRETO", TestSecret);
+        builder.UseSetting("Database:MigrateOnStartup", "true");
         ConfigureExtra(builder);
     }
 

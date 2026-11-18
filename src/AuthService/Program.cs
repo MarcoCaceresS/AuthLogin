@@ -1,13 +1,17 @@
 using System.Text.Json;
 using AuthService.Common;
 using AuthService.Data;
+using AuthService.Domain;
 using AuthService.Security;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 AuthOptions.AddTo(builder.Services);
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.ConfigureHttpJsonOptions(o =>
     o.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower);
 builder.Services.AddDbContext<AuthDbContext>(o =>
@@ -25,6 +29,8 @@ app.UseExceptionHandler(e => e.Run(ctx =>
 }));
 
 app.MapHealthChecks("/health");
+
+await DevSeeder.RunAtStartupAsync(app.Services, app.Configuration);
 
 app.Run();
 
