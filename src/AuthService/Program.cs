@@ -4,6 +4,7 @@ using AuthService.Data;
 using AuthService.Domain;
 using AuthService.Features.Admin;
 using AuthService.Features.Cuadrilla;
+using AuthService.Hosting;
 using AuthService.Security;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -26,6 +27,8 @@ builder.Services.ConfigureHttpJsonOptions(o =>
 builder.Services.AddDbContext<AuthDbContext>(o =>
     o.UseNpgsql(builder.Configuration.GetConnectionString("Auth")));
 builder.Services.AddHealthChecks();
+builder.Services.AddHttpClient(KeepAliveService.ClientName, c => c.Timeout = TimeSpan.FromSeconds(60));
+builder.Services.AddHostedService<KeepAliveService>();
 
 var app = builder.Build();
 
