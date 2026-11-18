@@ -34,6 +34,14 @@ public static class JwtSetup
                 };
                 o.Events = new JwtBearerEvents
                 {
+                    // Rol desconocido (por ejemplo "usuario" de la app de vecinos) = token inválido → 401.
+                    OnTokenValidated = ctx =>
+                    {
+                        var rol = ctx.Principal?.FindFirst(TokenIssuer.RolClaim)?.Value;
+                        if (rol is null || !RoleNames.AppFuncionarios.Contains(rol))
+                            ctx.Fail("Rol no válido para este servicio.");
+                        return Task.CompletedTask;
+                    },
                     OnChallenge = ctx =>
                     {
                         ctx.HandleResponse();
@@ -48,9 +56,7 @@ public static class JwtSetup
             });
 
         services.AddAuthorizationBuilder()
-            .AddPolicy(FuncionarioPolicy, p => p
-                .RequireAuthenticatedUser()
-                .RequireAssertion(ctx => RoleNames.AppFuncionarios.Contains(ctx.User.FindFirst(TokenIssuer.RolClaim)?.Value ?? "")))
+            .AddPolicy(FuncionarioPolicy, p => p.RequireAuthenticatedUser())
             .AddPolicy(AdminPolicy, p => p
                 .RequireAuthenticatedUser()
                 .RequireClaim(TokenIssuer.RolClaim, RoleNames.Superadmin));

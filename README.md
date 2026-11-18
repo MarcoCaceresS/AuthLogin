@@ -5,6 +5,8 @@ Servicio de login para la app de funcionarios de Vigila. Cumple el contrato
 cierre de sesión. Además, un superadmin gestiona a los funcionarios.
 
 - .NET 10, ASP.NET Core Minimal APIs, EF Core + PostgreSQL.
+- Roles: `funcionario`, `cuadrilla` y `superadmin`. Los vecinos usan otra app: un token con otro
+  rol (por ejemplo `usuario`) se trata como inválido (401 `no_autenticado`).
 - Cada login crea una sesión (una por dispositivo) en `UserSessions` y una fila en `LoginRecords`.
 - El JWT lleva `sid` (id de sesión). Renovar extiende la sesión. Logout la revoca.
 
@@ -30,7 +32,7 @@ docker compose up --build -d
 - API: `http://localhost:8080`. Health: `GET /health`.
 - PostgreSQL: `localhost:5432` (credenciales en `.env.example`).
 - Corre en modo `Development`: aplica migraciones y carga los usuarios de prueba de
-  `src/AuthService/appsettings.Development.json` (uno por rol, uno inactivo, uno sin verificar y un superadmin).
+  `src/AuthService/appsettings.Development.json` (funcionario, cuadrilla, uno inactivo, uno sin verificar y un superadmin).
 - Para probar con Insomnia: importar [`docs/insomnia/vigila-auth.json`](docs/insomnia/vigila-auth.json).
 
 Para cambiar valores, copiar `.env.example` a `.env`. Para detener: `docker compose down`
@@ -42,8 +44,8 @@ Rutas del contrato (`/api/v1/cuadrilla`):
 
 | Método | Ruta | Auth | Respuesta |
 |---|---|---|---|
-| POST | `/login` | — | 200 token · 401 `credenciales_invalidas` · 403 `sin_permiso` (vecino) · 422 · 429 |
-| POST | `/sesion/renovar` | Bearer | 200 token nuevo · 401 `no_autenticado` / `sesion_expirada` / `cuenta_inactiva` · 403 · 429 |
+| POST | `/login` | — | 200 token · 401 `credenciales_invalidas` · 422 · 429 |
+| POST | `/sesion/renovar` | Bearer | 200 token nuevo · 401 `no_autenticado` / `sesion_expirada` / `cuenta_inactiva` · 429 |
 | POST | `/logout` | Bearer (opcional) | 204 siempre |
 
 Gestión de usuarios (`/api/v1/admin/usuarios`, solo `superadmin`):

@@ -336,29 +336,6 @@
                                              }
                       },
                       {
-                          "_id":  "req_err_vecino",
-                          "_type":  "request",
-                          "parentId":  "fld_errores",
-                          "metaSortKey":  2,
-                          "name":  "Vecino",
-                          "method":  "POST",
-                          "url":  "{{ _.api }}/cuadrilla/login",
-                          "description":  "Esperado: 403 sin_permiso.",
-                          "headers":  [
-                                          {
-                                              "name":  "Content-Type",
-                                              "value":  "application/json"
-                                          }
-                                      ],
-                          "body":  {
-                                       "mimeType":  "application/json",
-                                       "text":  "{\"email\": \"vecino@victoria.cl\", \"password\": \"demo-dev-1234\"}"
-                                   },
-                          "authentication":  {
-
-                                             }
-                      },
-                      {
                           "_id":  "req_err_inactivo",
                           "_type":  "request",
                           "parentId":  "fld_errores",

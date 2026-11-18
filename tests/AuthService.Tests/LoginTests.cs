@@ -99,20 +99,6 @@ public sealed class LoginTests(ApiFactory factory) : IClassFixture<ApiFactory>
         Assert.Equal("credenciales_invalidas", await res.CodigoAsync());
     }
 
-    [Fact]
-    public async Task Vecino_con_clave_correcta_403()
-    {
-        var vecino = await TestUsers.CreateAsync(factory, RoleNames.Usuario);
-
-        var res = await _client.LoginAsync(vecino.Email, vecino.Password);
-
-        Assert.Equal(HttpStatusCode.Forbidden, res.StatusCode);
-        Assert.Equal("sin_permiso", await res.CodigoAsync());
-        await using var db = factory.NewDb();
-        Assert.False(await db.UserSessions.AnyAsync(s => s.UserId == vecino.Id));
-        Assert.False(await db.LoginRecords.AnyAsync(r => r.UserId == vecino.Id));
-    }
-
     [Theory]
     [InlineData(RoleNames.Superadmin)]
     [InlineData(RoleNames.Cuadrilla)]

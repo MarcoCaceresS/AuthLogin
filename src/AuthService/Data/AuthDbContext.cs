@@ -19,8 +19,7 @@ public sealed class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbC
             e.HasData(
                 new Role { Id = 1, Name = RoleNames.Funcionario },
                 new Role { Id = 2, Name = RoleNames.Cuadrilla },
-                new Role { Id = 3, Name = RoleNames.Superadmin },
-                new Role { Id = 4, Name = RoleNames.Usuario });
+                new Role { Id = 3, Name = RoleNames.Superadmin });
         });
 
         model.Entity<User>(e =>

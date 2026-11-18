@@ -19,7 +19,7 @@
 | Base de datos | PostgreSQL |
 | Alta de usuarios | Solo seed (sin endpoint de registro) |
 | `/reportes*` | Fuera de alcance: viven en FastAPI. Se documenta cómo FastAPI valida el token |
-| Rol vecino (`usuario`) | Existe en `Roles`. Login con clave correcta → **403 `sin_permiso`** |
+| Rol vecino (`usuario`) | ~~Existe en `Roles`; login → 403~~. **Actualizado 2026-11-18:** rol eliminado (migración `RemoveUsuarioRole` borra vecinos y su historial). Token con rol desconocido → 401 `no_autenticado` |
 | Email no verificado | Login → **401 `credenciales_invalidas`** |
 | Historial de ingresos | Tabla `LoginRecords`: solo **login exitoso**, con fecha, IP y User-Agent. Sin `Users.LastLoginAt` |
 | Librerías | Aprobadas: EF Core + Npgsql, JwtBearer, `PasswordHasher` de Identity.Core, xUnit + Mvc.Testing + Testcontainers |

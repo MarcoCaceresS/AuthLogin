@@ -91,11 +91,6 @@ namespace AuthService.Data.Migrations
                         {
                             Id = 3,
                             Name = "superadmin"
-                        },
-                        new
-                        {
-                            Id = 4,
-                            Name = "usuario"
                         });
                 });
 

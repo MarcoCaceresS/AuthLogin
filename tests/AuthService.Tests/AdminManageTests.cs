@@ -76,15 +76,6 @@ public sealed class AdminManageTests(FakeTimeApiFactory factory) : IClassFixture
     }
 
     [Fact]
-    public async Task Admin_puede_desactivar_vecino()
-    {
-        var (_, admin) = await _client.AdminAsync(factory);
-        var vecino = await TestUsers.CreateAsync(factory, RoleNames.Usuario);
-
-        Assert.Equal(HttpStatusCode.OK, (await EstadoAsync(admin, vecino.Id, false)).StatusCode);
-    }
-
-    [Fact]
     public async Task Estado_sin_campo_activo_422()
     {
         var (_, admin) = await _client.AdminAsync(factory);

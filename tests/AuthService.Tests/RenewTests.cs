@@ -133,15 +133,17 @@ public sealed class RenewTests(FakeTimeApiFactory factory) : IClassFixture<FakeT
     }
 
     [Fact]
-    public async Task Renovar_con_token_de_vecino_403()
+    public async Task Renovar_con_token_de_rol_desconocido_401()
     {
-        var vecino = await TestUsers.CreateAsync(factory, RoleNames.Usuario);
-        var token = factory.Services.GetRequiredService<TokenIssuer>().Issue(vecino.Id, RoleNames.Usuario, Guid.NewGuid());
+        // Por ejemplo un token de vecino ("usuario") firmado por otro sistema con el mismo secreto.
+        var user = await TestUsers.CreateAsync(factory);
+        var claims = ForgedTokens.ClaimsOf(await _client.LoginTokenAsync(user));
+        claims["rol"] = "usuario";
 
-        var res = await _client.PostWithTokenAsync(Renovar, token.AccessToken);
+        var res = await _client.PostWithTokenAsync(Renovar, ForgedTokens.Signed(claims, factory.Time.Now));
 
-        Assert.Equal(HttpStatusCode.Forbidden, res.StatusCode);
-        Assert.Equal("sin_permiso", await res.CodigoAsync());
+        Assert.Equal(HttpStatusCode.Unauthorized, res.StatusCode);
+        Assert.Equal("no_autenticado", await res.CodigoAsync());
     }
 
     [Fact]

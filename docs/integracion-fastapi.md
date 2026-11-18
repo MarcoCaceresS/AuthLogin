@@ -15,7 +15,9 @@ mismos del contrato, así que la app no cambia su código.
 - Algoritmo `HS256`, sin `iss` ni `aud`.
 - Exigir `exp`, `sub`, `rol` y `sid`. **Rechazar tokens sin `sid`**: así un token de vecino o de
   admin emitido por FastAPI no sirve como token de funcionario.
-- `rol` debe ser `funcionario`, `cuadrilla` o `superadmin`. Otro rol → 403 `sin_permiso`.
+- `rol` debe ser `funcionario`, `cuadrilla` o `superadmin`. Otro rol → 403 `sin_permiso`, como pide
+  el caso 7 del contrato para `/reportes`. (Este servicio ya no tiene rol `usuario`: aquí un token
+  con otro rol responde 401 `no_autenticado`.)
 - Tolerancia de reloj pequeña (`leeway=10` segundos). PyJWT aplica la misma tolerancia a `exp`,
   `nbf` e `iat`. Con `leeway=0`, si el reloj de FastAPI va un segundo atrás, rechaza un token
   recién emitido (su `iat`/`nbf` queda «en el futuro») y la app cierra la sesión justo después

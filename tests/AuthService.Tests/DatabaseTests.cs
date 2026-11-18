@@ -12,13 +12,24 @@ public sealed class DatabaseTests(ApiFactory factory) : IClassFixture<ApiFactory
     private IPasswordHasher<User> Hasher => factory.Services.GetRequiredService<IPasswordHasher<User>>();
 
     [Fact]
-    public async Task Migracion_crea_los_cuatro_roles()
+    public async Task Migracion_deja_solo_los_tres_roles_de_funcionario()
     {
         await using var db = factory.NewDb();
 
         var roles = await db.Roles.Select(r => r.Name).OrderBy(n => n).ToListAsync();
 
-        Assert.Equal(["cuadrilla", "funcionario", "superadmin", "usuario"], roles);
+        Assert.Equal(["cuadrilla", "funcionario", "superadmin"], roles);
+    }
+
+    [Fact]
+    public async Task Seed_con_rol_usuario_falla()
+    {
+        await using var db = factory.NewDb();
+        var vecino = Seed("vecino@victoria.cl");
+        vecino.Rol = "usuario";
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            DevSeeder.SeedAsync(db, Hasher, [vecino], TimeProvider.System, default));
     }
 
     [Fact]

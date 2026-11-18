@@ -37,7 +37,7 @@ public sealed class AdminCreateListTests(ApiFactory factory) : IClassFixture<Api
 
     [Theory]
     [InlineData(RoleNames.Superadmin)]
-    [InlineData(RoleNames.Usuario)]
+    [InlineData("usuario")]
     [InlineData("jefe")]
     public async Task Crear_con_rol_no_permitido_422(string rol)
     {
@@ -94,6 +94,19 @@ public sealed class AdminCreateListTests(ApiFactory factory) : IClassFixture<Api
         var body = await res.JsonAsync();
         Assert.Equal("sin_permiso", body.GetProperty("codigo").GetString());
         Assert.Equal("No tienes permiso para realizar esta acción.", body.GetProperty("mensaje").GetString());
+    }
+
+    [Fact]
+    public async Task Admin_con_token_de_rol_desconocido_401()
+    {
+        var (_, token) = await _client.AdminAsync(factory);
+        var claims = ForgedTokens.ClaimsOf(token);
+        claims["rol"] = "usuario";
+
+        var res = await _client.SendJsonAsync(HttpMethod.Get, AdminApi.Usuarios, ForgedTokens.Signed(claims, DateTimeOffset.UtcNow));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, res.StatusCode);
+        Assert.Equal("no_autenticado", await res.CodigoAsync());
     }
 
     [Fact]

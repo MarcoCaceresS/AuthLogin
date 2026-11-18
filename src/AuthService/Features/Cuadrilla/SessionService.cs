@@ -43,8 +43,6 @@ public sealed class SessionService(
 
         if (!user.IsActive || !user.IsEmailVerified)
             return SessionResult.Fail(ErrorCodes.CredencialesInvalidas);
-        if (!RoleNames.AppFuncionarios.Contains(user.Role.Name))
-            return SessionResult.Fail(ErrorCodes.SinPermiso);
 
         var session = new UserSession { Id = Guid.NewGuid(), UserId = user.Id, TokenHash = "" };
         var token = issuer.Issue(user.Id, user.Role.Name, session.Id);
@@ -80,8 +78,6 @@ public sealed class SessionService(
             return SessionResult.Fail(ErrorCodes.CuentaInactiva);
         if (session.RevokedAt is not null || session.ExpiresAt <= time.GetUtcNow())
             return SessionResult.Fail(ErrorCodes.NoAutenticado);
-        if (!RoleNames.AppFuncionarios.Contains(user.Role.Name))
-            return SessionResult.Fail(ErrorCodes.SinPermiso);
 
         var token = issuer.Issue(user.Id, user.Role.Name, session.Id);
         session.TokenHash = TokenIssuer.HashJti(token.Jti);
