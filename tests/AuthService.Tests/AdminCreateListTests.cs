@@ -131,6 +131,23 @@ public sealed class AdminCreateListTests(ApiFactory factory) : IClassFixture<Api
     }
 
     [Fact]
+    public async Task Admin_degradado_en_base_pierde_acceso_403()
+    {
+        // El token aún dice superadmin, pero en la base ya es funcionario.
+        var (admin, token) = await _client.AdminAsync(factory);
+        await using (var db = factory.NewDb())
+        {
+            var funcionarioRoleId = await db.Roles.Where(r => r.Name == RoleNames.Funcionario).Select(r => r.Id).SingleAsync();
+            await db.Users.Where(u => u.Id == admin.Id).ExecuteUpdateAsync(u => u.SetProperty(x => x.RoleId, funcionarioRoleId));
+        }
+
+        var res = await _client.CrearAsync(token, NewEmail());
+
+        Assert.Equal(HttpStatusCode.Forbidden, res.StatusCode);
+        Assert.Equal("sin_permiso", await res.CodigoAsync());
+    }
+
+    [Fact]
     public async Task Admin_desactivado_401()
     {
         var (admin, token) = await _client.AdminAsync(factory);

@@ -1,4 +1,5 @@
 using AuthService.Common;
+using AuthService.Domain;
 using AuthService.Features.Cuadrilla;
 using AuthService.Security;
 
@@ -40,16 +41,21 @@ public static class AdminEndpoints
                 result.Mensaje ?? (result.ErrorCode == ErrorCodes.SinPermiso ? SinPermisoMensaje : null));
 
     /// <summary>
-    /// Las acciones de admin revisan en la base, en cada request, que la sesión siga abierta
-    /// y la cuenta activa: un admin desactivado no puede seguir usando su token.
+    /// Las acciones de admin revisan en la base, en cada request, que la sesión siga abierta,
+    /// la cuenta activa y el rol siga siendo superadmin: el token solo no basta.
     /// </summary>
     private static async ValueTask<object?> RequireActiveSession(EndpointFilterInvocationContext ctx, EndpointFilterDelegate next)
     {
         var http = ctx.HttpContext;
         var sessions = http.RequestServices.GetRequiredService<SessionService>();
-        if (!CuadrillaEndpoints.TryGetIds(http.User, out var userId, out var sessionId)
-            || !await sessions.IsSessionActiveAsync(userId, sessionId, http.RequestAborted))
+        if (!CuadrillaEndpoints.TryGetIds(http.User, out var userId, out var sessionId))
             return ApiErrors.Result(ErrorCodes.NoAutenticado);
+
+        var rol = await sessions.ActiveSessionRoleAsync(userId, sessionId, http.RequestAborted);
+        if (rol is null)
+            return ApiErrors.Result(ErrorCodes.NoAutenticado);
+        if (rol != RoleNames.Superadmin)
+            return ApiErrors.Result(ErrorCodes.SinPermiso, SinPermisoMensaje);
 
         return await next(ctx);
     }

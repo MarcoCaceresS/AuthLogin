@@ -87,11 +87,14 @@ public sealed class SessionService(
         return new SessionResult(ToResponse(user, token), null);
     }
 
-    public Task<bool> IsSessionActiveAsync(Guid userId, Guid sessionId, CancellationToken ct)
+    /// <summary>Rol actual en la base si la sesión sigue abierta y la cuenta activa; si no, null.</summary>
+    public Task<string?> ActiveSessionRoleAsync(Guid userId, Guid sessionId, CancellationToken ct)
     {
         var now = time.GetUtcNow();
-        return db.UserSessions.AnyAsync(s =>
-            s.Id == sessionId && s.UserId == userId && s.RevokedAt == null && s.ExpiresAt > now && s.User.IsActive, ct);
+        return db.UserSessions
+            .Where(s => s.Id == sessionId && s.UserId == userId && s.RevokedAt == null && s.ExpiresAt > now && s.User.IsActive)
+            .Select(s => s.User.Role.Name)
+            .FirstOrDefaultAsync(ct);
     }
 
     /// <summary>Revoca la sesión. Idempotente: revocar dos veces no cambia la fecha.</summary>
