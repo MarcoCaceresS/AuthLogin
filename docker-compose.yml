@@ -1,3 +1,5 @@
+# Entorno local para probar con Insomnia. Usa ASPNETCORE_ENVIRONMENT=Development para cargar
+# los usuarios de prueba de appsettings.Development.json. No es una configuración de producción.
 services:
   db:
     image: postgres:17-alpine
@@ -14,6 +16,19 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Auth: "Host=db;Port=5432;Database=${POSTGRES_DB:-auth};Username=${POSTGRES_USER:-auth};Password=${POSTGRES_PASSWORD:-auth-dev}"
+      VIGILA_JWT_SECRETO: ${VIGILA_JWT_SECRETO:-secreto-solo-desarrollo-local-no-usar-en-produccion}
+      VIGILA_CUADRILLA_SESION_DIAS: ${VIGILA_CUADRILLA_SESION_DIAS:-7}
+    ports:
+      - "8080:8080"
 
 volumes:
   db-data:

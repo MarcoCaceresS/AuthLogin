@@ -1,0 +1,10 @@
+**/bin/
+**/obj/
+.git/
+.superpowers/
+.vs/
+.vscode/
+tests/
+docs/
+*.md
+.env
