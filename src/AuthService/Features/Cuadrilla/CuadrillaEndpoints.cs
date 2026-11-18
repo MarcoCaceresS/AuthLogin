@@ -16,13 +16,15 @@ public static class CuadrillaEndpoints
                 body.Password,
                 ctx.Connection.RemoteIpAddress?.ToString(),
                 ctx.Request.Headers.UserAgent.ToString(),
-                ct)));
+                ct)))
+            .RequireRateLimiting(RateLimits.LoginPolicy);
 
         group.MapPost("/sesion/renovar", async (ClaimsPrincipal user, SessionService sessions, CancellationToken ct) =>
                 TryGetIds(user, out var userId, out var sessionId)
                     ? ToHttp(await sessions.RenewAsync(userId, sessionId, ct))
                     : ApiErrors.Result(ErrorCodes.NoAutenticado))
-            .RequireAuthorization(JwtSetup.FuncionarioPolicy);
+            .RequireAuthorization(JwtSetup.FuncionarioPolicy)
+            .RequireRateLimiting(RateLimits.RenewPolicy);
 
         // Best-effort: siempre 204, también con token vencido, inválido o ausente.
         group.MapPost("/logout", async (HttpContext ctx, TokenReader reader, SessionService sessions, CancellationToken ct) =>

@@ -34,6 +34,9 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("ConnectionStrings:Auth", _db.GetConnectionString());
         builder.UseSetting("VIGILA_JWT_SECRETO", TestSecret);
         builder.UseSetting("Database:MigrateOnStartup", "true");
+        // Los tests comparten IP: límites altos salvo en RateLimitFactory.
+        builder.UseSetting("RateLimits:LoginPerMinute", "10000");
+        builder.UseSetting("RateLimits:RenewPerMinute", "10000");
         // TestServer no trae IP remota: se fija una para poder verificar LoginRecords.
         builder.ConfigureServices(s => s.AddSingleton<IStartupFilter, FixedRemoteIp>());
         ConfigureExtra(builder);

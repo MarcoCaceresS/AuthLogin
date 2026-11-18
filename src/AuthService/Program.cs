@@ -19,6 +19,7 @@ builder.Services.AddSingleton<TokenReader>();
 builder.Services.AddScoped<SessionService>();
 builder.Services.AddScoped<UserAdminService>();
 builder.Services.AddFuncionarioAuth();
+builder.Services.AddAuthRateLimits(builder.Configuration);
 // Body ausente o JSON inválido lanza BadHttpRequestException en todo ambiente → 422 datos_invalidos.
 builder.Services.Configure<RouteHandlerOptions>(o => o.ThrowOnBadRequest = true);
 builder.Services.ConfigureHttpJsonOptions(o =>
@@ -28,6 +29,9 @@ builder.Services.AddDbContext<AuthDbContext>(o =>
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
+
+if (app.Configuration.GetValue("ForwardedHeaders:Enabled", false))
+    app.UseForwardedHeaders();
 
 app.UseExceptionHandler(e => e.Run(ctx =>
 {
@@ -39,6 +43,7 @@ app.UseExceptionHandler(e => e.Run(ctx =>
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.MapHealthChecks("/health");
 app.MapCuadrilla();
