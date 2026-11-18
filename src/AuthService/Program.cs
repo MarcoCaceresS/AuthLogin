@@ -5,7 +5,6 @@ using AuthService.Domain;
 using AuthService.Features.Admin;
 using AuthService.Features.Cuadrilla;
 using AuthService.Security;
-using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -33,13 +32,7 @@ var app = builder.Build();
 if (app.Configuration.GetValue("ForwardedHeaders:Enabled", false))
     app.UseForwardedHeaders();
 
-app.UseExceptionHandler(e => e.Run(ctx =>
-{
-    // Body JSON mal formado o de tipo incorrecto llega como BadHttpRequestException.
-    var error = ctx.Features.Get<IExceptionHandlerFeature>()?.Error;
-    var codigo = error is BadHttpRequestException ? ErrorCodes.DatosInvalidos : ErrorCodes.ErrorInterno;
-    return ApiErrors.WriteAsync(ctx, codigo);
-}));
+app.UseApiErrors();
 
 app.UseAuthentication();
 app.UseAuthorization();

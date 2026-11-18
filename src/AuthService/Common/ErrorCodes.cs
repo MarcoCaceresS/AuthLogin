@@ -11,5 +11,7 @@ public static class ErrorCodes
     public const string DatosInvalidos = "datos_invalidos";
     public const string EmailEnUso = "email_en_uso";
     public const string UsuarioNoEncontrado = "usuario_no_encontrado";
+    public const string NoEncontrado = "no_encontrado";
+    public const string MetodoNoPermitido = "metodo_no_permitido";
     public const string ErrorInterno = "error_interno";
 }

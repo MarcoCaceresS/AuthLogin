@@ -16,6 +16,8 @@ public static class ApiErrors
         [ErrorCodes.DatosInvalidos] = (422, "Ingresa tu correo y contraseña."),
         [ErrorCodes.EmailEnUso] = (409, "Ya existe un usuario con ese correo."),
         [ErrorCodes.UsuarioNoEncontrado] = (404, "No se encontró el usuario."),
+        [ErrorCodes.NoEncontrado] = (404, "La ruta no existe."),
+        [ErrorCodes.MetodoNoPermitido] = (405, "Método no permitido en esta ruta."),
         [ErrorCodes.ErrorInterno] = (500, "Ocurrió un error. Inténtalo más tarde."),
     };
 
