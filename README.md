@@ -59,7 +59,12 @@ Gestión de usuarios (`/api/v1/admin/usuarios`, solo `superadmin`):
 | GET | `/{id}/ingresos` | — | 200 últimos 100 ingresos |
 
 Un superadmin no puede desactivar ni cambiar la clave de un superadmin (ni la suya): 403.
-Errores siempre con forma `{"codigo": "...", "mensaje": "..."}`.
+Errores siempre con forma `{"codigo": "...", "mensaje": "..."}`. También una ruta inexistente
+(404 `no_encontrado`) y un método equivocado (405 `metodo_no_permitido`).
+
+Login, renovar y las rutas admin bloquean la fila del usuario en la base: si un admin lo está
+desactivando o cambiando su clave en ese momento, esperan y ven el cambio. Las rutas admin
+revisan además, en cada request, que el rol en la base siga siendo `superadmin`.
 
 ## Configuración
 
