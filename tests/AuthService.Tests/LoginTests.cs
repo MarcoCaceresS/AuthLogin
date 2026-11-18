@@ -162,6 +162,31 @@ public sealed class LoginTests(ApiFactory factory) : IClassFixture<ApiFactory>
             await res.Content.ReadAsStringAsync());
     }
 
+    [Fact]
+    public async Task Email_inexistente_igual_calcula_un_hash()
+    {
+        // Sin esto, responder más rápido revelaría que el correo no existe.
+        var counter = new CountingHasher();
+        var client = factory.WithWebHostBuilder(b => b.ConfigureTestServices(s =>
+            s.AddSingleton<IPasswordHasher<User>>(counter))).CreateClient();
+
+        await client.LoginAsync("nadie-existe@victoria.cl", "otra-clave-123");
+
+        Assert.Equal(1, counter.Verifications);
+    }
+
+    private sealed class CountingHasher : IPasswordHasher<User>
+    {
+        private readonly PasswordHasher<User> _inner = new();
+        public int Verifications;
+        public string HashPassword(User user, string password) => _inner.HashPassword(user, password);
+        public PasswordVerificationResult VerifyHashedPassword(User user, string hashedPassword, string providedPassword)
+        {
+            Interlocked.Increment(ref Verifications);
+            return _inner.VerifyHashedPassword(user, hashedPassword, providedPassword);
+        }
+    }
+
     private static StringContent JsonContent(string body) => new(body, Encoding.UTF8, "application/json");
 
     private sealed class ThrowingHasher : IPasswordHasher<User>

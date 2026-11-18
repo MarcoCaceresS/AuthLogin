@@ -57,6 +57,29 @@ public sealed class RenewTests(FakeTimeApiFactory factory) : IClassFixture<FakeT
         Assert.Equal("sesion_expirada", await res.CodigoAsync());
     }
 
+    [Fact]
+    public async Task Renovar_en_el_segundo_exacto_del_vencimiento_401()
+    {
+        var user = await TestUsers.CreateAsync(factory);
+        var token = await _client.LoginTokenAsync(user);
+        factory.Time.Advance(TimeSpan.FromDays(7));
+
+        var res = await _client.PostWithTokenAsync(Renovar, token);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, res.StatusCode);
+        Assert.Equal("sesion_expirada", await res.CodigoAsync());
+    }
+
+    [Fact]
+    public async Task Renovar_un_segundo_antes_del_vencimiento_200()
+    {
+        var user = await TestUsers.CreateAsync(factory);
+        var token = await _client.LoginTokenAsync(user);
+        factory.Time.Advance(TimeSpan.FromDays(7) - TimeSpan.FromSeconds(1));
+
+        Assert.Equal(HttpStatusCode.OK, (await _client.PostWithTokenAsync(Renovar, token)).StatusCode);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("token-inventado")]
