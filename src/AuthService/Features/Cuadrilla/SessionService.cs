@@ -35,14 +35,21 @@ public sealed class SessionService(
             return SessionResult.Fail(ErrorCodes.CredencialesInvalidas);
         }
 
-        var check = hasher.VerifyHashedPassword(user, user.PasswordHash, password);
+        var verifiedHash = user.PasswordHash;
+        var check = hasher.VerifyHashedPassword(user, verifiedHash, password);
         if (check == PasswordVerificationResult.Failed)
+            return SessionResult.Fail(ErrorCodes.CredencialesInvalidas);
+        if (!user.IsActive || !user.IsEmailVerified)
+            return SessionResult.Fail(ErrorCodes.CredencialesInvalidas);
+
+        // Si un admin está desactivando o cambiando la clave ahora mismo, esperar y volver a mirar.
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await LockUserAsync(user.Id, ct);
+        await db.Entry(user).ReloadAsync(ct);
+        if (!user.IsActive || !user.IsEmailVerified || user.PasswordHash != verifiedHash)
             return SessionResult.Fail(ErrorCodes.CredencialesInvalidas);
         if (check == PasswordVerificationResult.SuccessRehashNeeded)
             user.PasswordHash = hasher.HashPassword(user, password);
-
-        if (!user.IsActive || !user.IsEmailVerified)
-            return SessionResult.Fail(ErrorCodes.CredencialesInvalidas);
 
         var session = new UserSession { Id = Guid.NewGuid(), UserId = user.Id, TokenHash = "" };
         var token = issuer.Issue(user.Id, user.Role.Name, session.Id);
@@ -59,6 +66,7 @@ public sealed class SessionService(
             UserAgent = Truncate(userAgent, LoginRecord.UserAgentMaxLength),
         });
         await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
 
         return new SessionResult(ToResponse(user, token), null);
     }
@@ -66,6 +74,10 @@ public sealed class SessionService(
     /// <summary>Extiende la sesión otros N días y emite un token nuevo con el mismo sid.</summary>
     public async Task<SessionResult> RenewAsync(Guid userId, Guid sessionId, CancellationToken ct)
     {
+        // La fila del usuario queda tomada: una desactivación o reset de clave en curso termina primero.
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await LockUserAsync(userId, ct);
+
         var session = await db.UserSessions
             .Include(s => s.User).ThenInclude(u => u.Role)
             .SingleOrDefaultAsync(s => s.Id == sessionId && s.UserId == userId, ct);
@@ -83,9 +95,14 @@ public sealed class SessionService(
         session.TokenHash = TokenIssuer.HashJti(token.Jti);
         session.ExpiresAt = token.ExpiresAt;
         await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
 
         return new SessionResult(ToResponse(user, token), null);
     }
+
+    /// <summary>SELECT ... FOR UPDATE: bloquea la fila del usuario hasta el fin de la transacción.</summary>
+    private Task LockUserAsync(Guid userId, CancellationToken ct) =>
+        db.Database.ExecuteSqlAsync($"""SELECT 1 FROM "Users" WHERE "Id" = {userId} FOR UPDATE""", ct);
 
     /// <summary>Rol actual en la base si la sesión sigue abierta y la cuenta activa; si no, null.</summary>
     public Task<string?> ActiveSessionRoleAsync(Guid userId, Guid sessionId, CancellationToken ct)
