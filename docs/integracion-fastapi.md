@@ -16,7 +16,11 @@ mismos del contrato, así que la app no cambia su código.
 - Exigir `exp`, `sub`, `rol` y `sid`. **Rechazar tokens sin `sid`**: así un token de vecino o de
   admin emitido por FastAPI no sirve como token de funcionario.
 - `rol` debe ser `funcionario`, `cuadrilla` o `superadmin`. Otro rol → 403 `sin_permiso`.
-- Sin tolerancia de reloj (`leeway=0`).
+- Tolerancia de reloj pequeña (`leeway=10` segundos). PyJWT aplica la misma tolerancia a `exp`,
+  `nbf` e `iat`. Con `leeway=0`, si el reloj de FastAPI va un segundo atrás, rechaza un token
+  recién emitido (su `iat`/`nbf` queda «en el futuro») y la app cierra la sesión justo después
+  del login. 10 s de más en `exp` no importan en una sesión de 7 días. El vencimiento exacto lo
+  decide este servicio al renovar.
 
 ```python
 import jwt
@@ -37,7 +41,7 @@ def funcionario_actual(request: Request) -> dict:
             settings.VIGILA_JWT_SECRETO,
             algorithms=["HS256"],
             options={"require": ["exp", "sub", "rol", "sid"]},
-            leeway=0,
+            leeway=10,
         )
     except jwt.ExpiredSignatureError:
         raise _error(401, "sesion_expirada", "Tu sesión expiró. Inicia sesión nuevamente.")
