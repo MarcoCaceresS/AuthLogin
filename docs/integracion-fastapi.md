@@ -13,8 +13,13 @@ mismos del contrato, así que la app no cambia su código.
 
 - Mismo secreto: `VIGILA_JWT_SECRETO` en ambos servicios.
 - Algoritmo `HS256`, sin `iss` ni `aud`.
-- Exigir `exp`, `sub`, `rol` y `sid`. **Rechazar tokens sin `sid`**: así un token de vecino o de
-  admin emitido por FastAPI no sirve como token de funcionario.
+- Exigir `exp`, `sub`, `rol` y `sid`. Sin `sid` se rechazan los tokens de 15 minutos que emite el
+  propio FastAPI en `/cuadrilla/login` y en el panel admin. Los tokens de vecino **sí** traen
+  `sid`: a esos los rechaza el chequeo de rol de abajo.
+- No buscar al funcionario en la tabla `Funcionario` de FastAPI: los funcionarios viven en este
+  servicio, y su `sub` es un Guid que FastAPI no conoce. Basta con el token.
+- Guardar `payload["sub"]` en `reporte_historial.funcionario_id` (un Guid de 36 caracteres) para
+  saber quién cambió cada estado.
 - `rol` debe ser `funcionario`, `cuadrilla` o `superadmin`. Otro rol → 403 `sin_permiso`, como pide
   el caso 7 del contrato para `/reportes`. (Este servicio ya no tiene rol `usuario`: aquí un token
   con otro rol responde 401 `no_autenticado`.)
