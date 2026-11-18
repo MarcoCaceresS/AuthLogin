@@ -1,3 +1,4 @@
+using System.Net;
 using System.Security.Claims;
 using AuthService.Common;
 using AuthService.Security;
@@ -14,7 +15,7 @@ public static class CuadrillaEndpoints
             ToHttp(await sessions.LoginAsync(
                 body.Email,
                 body.Password,
-                ctx.Connection.RemoteIpAddress?.ToString(),
+                ClientIp(ctx.Connection.RemoteIpAddress),
                 ctx.Request.Headers.UserAgent.ToString(),
                 ct)))
             .RequireRateLimiting(RateLimits.LoginPolicy);
@@ -36,6 +37,10 @@ public static class CuadrillaEndpoints
 
         return app;
     }
+
+    /// <summary>IP legible para el historial: "::ffff:1.2.3.4" se guarda como "1.2.3.4".</summary>
+    public static string? ClientIp(IPAddress? ip) =>
+        ip is null ? null : (ip.IsIPv4MappedToIPv6 ? ip.MapToIPv4() : ip).ToString();
 
     /// <summary>Lee sub y sid del token. Tokens sin sid (por ejemplo, de otro emisor) no valen.</summary>
     public static bool TryGetIds(ClaimsPrincipal user, out Guid userId, out Guid sessionId)
