@@ -1,4 +1,6 @@
+using System.Net;
 using AuthService.Data;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -32,7 +34,24 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("ConnectionStrings:Auth", _db.GetConnectionString());
         builder.UseSetting("VIGILA_JWT_SECRETO", TestSecret);
         builder.UseSetting("Database:MigrateOnStartup", "true");
+        // TestServer no trae IP remota: se fija una para poder verificar LoginRecords.
+        builder.ConfigureServices(s => s.AddSingleton<IStartupFilter, FixedRemoteIp>());
         ConfigureExtra(builder);
+    }
+
+    public const string TestIp = "203.0.113.10";
+
+    private sealed class FixedRemoteIp : IStartupFilter
+    {
+        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
+        {
+            app.Use((ctx, nxt) =>
+            {
+                ctx.Connection.RemoteIpAddress ??= IPAddress.Parse(TestIp);
+                return nxt(ctx);
+            });
+            next(app);
+        };
     }
 
     /// <summary>Punto de extensión para fábricas de tests con configuración propia.</summary>
