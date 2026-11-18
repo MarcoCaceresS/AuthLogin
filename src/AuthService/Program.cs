@@ -25,7 +25,7 @@ builder.Services.Configure<RouteHandlerOptions>(o => o.ThrowOnBadRequest = true)
 builder.Services.ConfigureHttpJsonOptions(o =>
     o.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower);
 builder.Services.AddDbContext<AuthDbContext>(o =>
-    o.UseNpgsql(builder.Configuration.GetConnectionString("Auth")));
+    o.UseNpgsql(DatabaseUrl.Resolve(builder.Configuration)));
 builder.Services.AddHealthChecks();
 builder.Services.AddHttpClient(KeepAliveService.ClientName, c => c.Timeout = TimeSpan.FromSeconds(60));
 builder.Services.AddHostedService<KeepAliveService>();

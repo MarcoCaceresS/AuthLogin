@@ -16,6 +16,9 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     private readonly PostgreSqlContainer _db = new PostgreSqlBuilder("postgres:17-alpine").Build();
 
+    /// <summary>Conexión del contenedor de pruebas (formato clave=valor).</summary>
+    protected string DbConnectionString => _db.GetConnectionString();
+
     public async Task InitializeAsync()
     {
         await _db.StartAsync();
