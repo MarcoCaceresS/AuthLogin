@@ -24,6 +24,14 @@ public static class CuadrillaEndpoints
                     : ApiErrors.Result(ErrorCodes.NoAutenticado))
             .RequireAuthorization(JwtSetup.FuncionarioPolicy);
 
+        // Best-effort: siempre 204, también con token vencido, inválido o ausente.
+        group.MapPost("/logout", async (HttpContext ctx, TokenReader reader, SessionService sessions, CancellationToken ct) =>
+        {
+            if (await reader.ReadSessionIdAsync(ctx.Request.Headers.Authorization.ToString()) is { } sessionId)
+                await sessions.LogoutAsync(sessionId, ct);
+            return Results.NoContent();
+        }).AllowAnonymous();
+
         return app;
     }
 

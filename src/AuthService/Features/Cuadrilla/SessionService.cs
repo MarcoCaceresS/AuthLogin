@@ -91,6 +91,15 @@ public sealed class SessionService(
         return new SessionResult(ToResponse(user, token), null);
     }
 
+    /// <summary>Revoca la sesión. Idempotente: revocar dos veces no cambia la fecha.</summary>
+    public Task LogoutAsync(Guid sessionId, CancellationToken ct)
+    {
+        var now = time.GetUtcNow();
+        return db.UserSessions
+            .Where(s => s.Id == sessionId && s.RevokedAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.RevokedAt, now), ct);
+    }
+
     private TokenResponse ToResponse(User user, IssuedToken token) => new(
         token.AccessToken,
         "bearer",

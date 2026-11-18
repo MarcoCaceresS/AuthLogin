@@ -14,6 +14,7 @@ AuthOptions.AddTo(builder.Services);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddSingleton<TokenIssuer>();
+builder.Services.AddSingleton<TokenReader>();
 builder.Services.AddScoped<SessionService>();
 builder.Services.AddFuncionarioAuth();
 // Body ausente o JSON inválido lanza BadHttpRequestException en todo ambiente → 422 datos_invalidos.
