@@ -15,6 +15,7 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddSingleton<TokenIssuer>();
 builder.Services.AddScoped<SessionService>();
+builder.Services.AddFuncionarioAuth();
 // Body ausente o JSON inválido lanza BadHttpRequestException en todo ambiente → 422 datos_invalidos.
 builder.Services.Configure<RouteHandlerOptions>(o => o.ThrowOnBadRequest = true);
 builder.Services.ConfigureHttpJsonOptions(o =>
@@ -32,6 +33,9 @@ app.UseExceptionHandler(e => e.Run(ctx =>
     var codigo = error is BadHttpRequestException ? ErrorCodes.DatosInvalidos : ErrorCodes.ErrorInterno;
     return ApiErrors.WriteAsync(ctx, codigo);
 }));
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapHealthChecks("/health");
 app.MapCuadrilla();

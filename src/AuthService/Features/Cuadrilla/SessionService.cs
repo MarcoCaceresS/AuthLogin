@@ -12,7 +12,8 @@ public sealed class SessionService(
     AuthDbContext db,
     IPasswordHasher<User> hasher,
     TokenIssuer issuer,
-    IOptions<AuthOptions> options)
+    IOptions<AuthOptions> options,
+    TimeProvider time)
 {
     // Hash fijo para comparar cuando el correo no existe: el tiempo de respuesta no revela si existe.
     private static readonly User DummyUser = new() { Email = "", FirstName = "", LastName = "" };
@@ -59,6 +60,32 @@ public sealed class SessionService(
             IpAddress = ip,
             UserAgent = Truncate(userAgent, LoginRecord.UserAgentMaxLength),
         });
+        await db.SaveChangesAsync(ct);
+
+        return new SessionResult(ToResponse(user, token), null);
+    }
+
+    /// <summary>Extiende la sesión otros N días y emite un token nuevo con el mismo sid.</summary>
+    public async Task<SessionResult> RenewAsync(Guid userId, Guid sessionId, CancellationToken ct)
+    {
+        var session = await db.UserSessions
+            .Include(s => s.User).ThenInclude(u => u.Role)
+            .SingleOrDefaultAsync(s => s.Id == sessionId && s.UserId == userId, ct);
+        if (session is null)
+            return SessionResult.Fail(ErrorCodes.NoAutenticado);
+
+        var user = session.User;
+        // Antes que la revocación: desactivar revoca sesiones y la app debe ver «cuenta desactivada».
+        if (!user.IsActive)
+            return SessionResult.Fail(ErrorCodes.CuentaInactiva);
+        if (session.RevokedAt is not null || session.ExpiresAt <= time.GetUtcNow())
+            return SessionResult.Fail(ErrorCodes.NoAutenticado);
+        if (!RoleNames.AppFuncionarios.Contains(user.Role.Name))
+            return SessionResult.Fail(ErrorCodes.SinPermiso);
+
+        var token = issuer.Issue(user.Id, user.Role.Name, session.Id);
+        session.TokenHash = TokenIssuer.HashJti(token.Jti);
+        session.ExpiresAt = token.ExpiresAt;
         await db.SaveChangesAsync(ct);
 
         return new SessionResult(ToResponse(user, token), null);
