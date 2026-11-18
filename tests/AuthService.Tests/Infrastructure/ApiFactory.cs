@@ -10,6 +10,8 @@ namespace AuthService.Tests.Infrastructure;
 /// <summary>API en memoria con un PostgreSQL real y desechable por clase de test.</summary>
 public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    public const string TestSecret = "secreto-de-pruebas-solo-para-tests-0123456789";
+
     private readonly PostgreSqlContainer _db = new PostgreSqlBuilder("postgres:17-alpine").Build();
 
     public async Task InitializeAsync()
@@ -29,12 +31,16 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     {
         builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:Auth", _db.GetConnectionString());
+        builder.UseSetting("VIGILA_JWT_SECRETO", TestSecret);
+        ConfigureExtra(builder);
+    }
+
+    /// <summary>Punto de extensión para fábricas de tests con configuración propia.</summary>
+    protected virtual void ConfigureExtra(IWebHostBuilder builder)
+    {
     }
 
     /// <summary>Abre un DbContext propio para preparar o revisar datos.</summary>
-    public AuthDbContext NewDb()
-    {
-        var scope = Services.CreateScope();
-        return scope.ServiceProvider.GetRequiredService<AuthDbContext>();
-    }
+    public AuthDbContext NewDb() =>
+        Services.CreateScope().ServiceProvider.GetRequiredService<AuthDbContext>();
 }
