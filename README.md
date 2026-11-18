@@ -78,6 +78,8 @@ revisan además, en cada request, que el rol en la base siga siendo `superadmin`
 | `Seed__Enabled` | Carga `Seed:Users` (solo desarrollo) | `false` |
 | `RateLimits__LoginPerMinute` | Logins por minuto por IP | `10` |
 | `RateLimits__RenewPerMinute` | Renovaciones por minuto por funcionario | `30` |
+| `KeepAlive__Url` | URL pública a la que el servicio se llama a sí mismo (`<url>/health`). Si falta, usa `RENDER_EXTERNAL_URL`, que Render define solo. Sin ninguna, el keep-alive queda apagado | — |
+| `KeepAlive__Interval` | Cada cuánto se llama. Debe ser menor a 15 min (Render duerme a los 15) | `00:10:00` |
 | `ForwardedHeaders__Enabled` | Lee la IP real de `X-Forwarded-For`. Activar **solo** detrás de un proxy (Render) | `false` |
 
 ## Producción (Render)
@@ -86,6 +88,14 @@ revisan además, en cada request, que el rol en la base siga siendo `superadmin`
    `Database__MigrateOnStartup=true` y `ForwardedHeaders__Enabled=true`.
 2. Definir `Seed__Admin__*` para el primer superadmin. Después de entrar, se pueden borrar.
 3. El superadmin crea a los funcionarios con `POST /api/v1/admin/usuarios`.
+
+**Keep-alive.** En Render, el servicio se llama solo a `GET /health` cada 10 minutos para no
+dormirse. No hay que configurar nada: usa `RENDER_EXTERNAL_URL`. En local (Docker) queda apagado.
+
+> Ojo con el plan gratuito: da 750 horas al mes por cuenta. Un servicio despierto todo el mes usa
+> unas 744. Si FastAPI también se mantiene despierto en la misma cuenta, se pasan del límite y
+> Render suspende **los dos** hasta el mes siguiente. Para evitarlo, deja el keep-alive solo en uno
+> o usa un plan pago.
 
 Cómo FastAPI valida estos tokens: [`docs/integracion-fastapi.md`](docs/integracion-fastapi.md).
 
