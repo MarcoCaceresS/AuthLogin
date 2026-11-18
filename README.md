@@ -72,7 +72,8 @@ revisan además, en cada request, que el rol en la base siga siendo `superadmin`
 |---|---|---|
 | `VIGILA_JWT_SECRETO` | Secreto HS256, mínimo 32 bytes. El mismo que usa FastAPI | — (obligatorio) |
 | `VIGILA_CUADRILLA_SESION_DIAS` | Duración de la sesión | `7` |
-| `ConnectionStrings__Auth` | Conexión a PostgreSQL | — |
+| `ConnectionStrings__Auth` | Conexión a PostgreSQL en formato `Host=...;Database=...` | — |
+| `DATABASE_URL` | Conexión en formato URL (`postgresql://user:clave@host/base?sslmode=require`), como la entregan Neon y Render. Se usa si falta `ConnectionStrings__Auth` | — |
 | `Database__MigrateOnStartup` | Aplica migraciones al arrancar | `false` |
 | `Seed__Admin__Email`, `__Password`, `__FirstName`, `__LastName` | Crea el primer superadmin si no existe ninguno | — |
 | `Seed__Enabled` | Carga `Seed:Users` (solo desarrollo) | `false` |
@@ -82,12 +83,49 @@ revisan además, en cada request, que el rol en la base siga siendo `superadmin`
 | `KeepAlive__Interval` | Cada cuánto se llama. Debe ser menor a 15 min (Render duerme a los 15) | `00:10:00` |
 | `ForwardedHeaders__Enabled` | Lee la IP real de `X-Forwarded-For`. Activar **solo** detrás de un proxy (Render) | `false` |
 
-## Producción (Render)
+## Producción (Render + Neon)
 
-1. Definir `VIGILA_JWT_SECRETO` (igual al de FastAPI), `ConnectionStrings__Auth`,
-   `Database__MigrateOnStartup=true` y `ForwardedHeaders__Enabled=true`.
-2. Definir `Seed__Admin__*` para el primer superadmin. Después de entrar, se pueden borrar.
-3. El superadmin crea a los funcionarios con `POST /api/v1/admin/usuarios`.
+La base va en **Neon** (plan Free): no caduca y se apaga sola cuando nadie la usa. La base gratis
+de Render se borra a los 30 días, así que no conviene.
+
+### 1. Base en Neon
+
+1. Crear un proyecto en [neon.com](https://neon.com). Región: **AWS US East (N. Virginia)**, la
+   misma que el servicio en Render, para que cada consulta tarde menos.
+2. En **Connect**, dejar **Connection pooling apagado** (conexión directa, sin `-pooler` en el
+   host) y copiar la URL: `postgresql://...neon.tech/neondb?sslmode=require&channel_binding=require`.
+
+### 2. Servicio en Render
+
+1. **New → Web Service →** este repo. Runtime **Docker**. Región **Virginia (US East)**.
+2. **Health Check Path:** `/health`.
+3. Variables de entorno:
+
+| Variable | Valor |
+|---|---|
+| `PORT` | `8080` (el puerto donde escucha la app) |
+| `DATABASE_URL` | La URL de Neon, tal cual |
+| `VIGILA_JWT_SECRETO` | El mismo de FastAPI |
+| `Database__MigrateOnStartup` | `true` |
+| `ForwardedHeaders__Enabled` | `true` |
+| `Seed__Admin__Email`, `Seed__Admin__Password`, `Seed__Admin__FirstName`, `Seed__Admin__LastName` | Primer superadmin |
+
+No definir `ASPNETCORE_ENVIRONMENT` (queda en `Production` y no carga usuarios de prueba).
+
+### 3. Después del primer deploy
+
+1. Login con el superadmin y crear a los funcionarios con `POST /api/v1/admin/usuarios`.
+2. Borrar las variables `Seed__Admin__*`.
+
+### Límites de Neon Free
+
+- 1 GB por proyecto y 100 CU-hours de cómputo al mes. Con el tamaño mínimo (0,25 CU) son unas
+  400 horas con la base encendida.
+- La base se apaga tras 5 minutos sin consultas y se enciende sola en la siguiente (la primera
+  consulta tarda un poco más).
+- Si se acaban las horas, Neon suspende la base hasta el mes siguiente.
+- Por eso `/health` **no consulta la base**: el keep-alive mantiene despierto a Render sin
+  gastar horas de Neon. No agregar un chequeo de base a `/health`.
 
 **Keep-alive.** En Render, el servicio se llama solo a `GET /health` cada 10 minutos para no
 dormirse. No hay que configurar nada: usa `RENDER_EXTERNAL_URL`. En local (Docker) queda apagado.
