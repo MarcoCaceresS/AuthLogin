@@ -12,6 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 AuthOptions.AddTo(builder.Services);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
+builder.Services.AddSingleton<TokenIssuer>();
 builder.Services.ConfigureHttpJsonOptions(o =>
     o.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower);
 builder.Services.AddDbContext<AuthDbContext>(o =>
