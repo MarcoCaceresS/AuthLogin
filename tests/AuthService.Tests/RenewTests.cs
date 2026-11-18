@@ -71,11 +71,26 @@ public sealed class RenewTests(FakeTimeApiFactory factory) : IClassFixture<FakeT
     [Fact]
     public async Task Renovar_token_con_otra_firma_401()
     {
+        // sub y sid de una sesión real y activa: solo la firma puede rechazarlo.
         var user = await TestUsers.CreateAsync(factory);
-        var token = CustomToken(user.Id, includeSid: true, secret: "otro-secreto-distinto-de-32-bytes-o-mas!!");
+        var claims = ForgedTokens.ClaimsOf(await _client.LoginTokenAsync(user));
+        var token = ForgedTokens.Signed(claims, factory.Time.Now, secret: "otro-secreto-distinto-de-32-bytes-o-mas!!");
 
         var res = await _client.PostWithTokenAsync(Renovar, token);
 
+        Assert.Equal(HttpStatusCode.Unauthorized, res.StatusCode);
+        Assert.Equal("no_autenticado", await res.CodigoAsync());
+    }
+
+    [Fact]
+    public async Task Renovar_token_sin_firma_alg_none_401()
+    {
+        var user = await TestUsers.CreateAsync(factory);
+        var claims = ForgedTokens.ClaimsOf(await _client.LoginTokenAsync(user));
+
+        var res = await _client.PostWithTokenAsync(Renovar, ForgedTokens.Unsigned(claims, factory.Time.Now));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, res.StatusCode);
         Assert.Equal("no_autenticado", await res.CodigoAsync());
     }
 
@@ -107,9 +122,11 @@ public sealed class RenewTests(FakeTimeApiFactory factory) : IClassFixture<FakeT
     [Fact]
     public async Task Renovar_token_sin_sid_401()
     {
+        // El usuario tiene una sesión activa: solo la falta de sid puede rechazarlo.
         var user = await TestUsers.CreateAsync(factory);
+        var claims = ForgedTokens.ClaimsOf(await _client.LoginTokenAsync(user), keepSid: false);
 
-        var res = await _client.PostWithTokenAsync(Renovar, CustomToken(user.Id, includeSid: false));
+        var res = await _client.PostWithTokenAsync(Renovar, ForgedTokens.Signed(claims, factory.Time.Now));
 
         Assert.Equal(HttpStatusCode.Unauthorized, res.StatusCode);
         Assert.Equal("no_autenticado", await res.CodigoAsync());
@@ -137,28 +154,5 @@ public sealed class RenewTests(FakeTimeApiFactory factory) : IClassFixture<FakeT
 
         await using var db = factory.NewDb();
         Assert.Equal(1, await db.LoginRecords.CountAsync(r => r.UserId == user.Id));
-    }
-
-    /// <summary>Token firmado a mano, como lo emitiría otro sistema (por ejemplo FastAPI).</summary>
-    private string CustomToken(Guid userId, bool includeSid, string secret = ApiFactory.TestSecret)
-    {
-        var claims = new Dictionary<string, object>
-        {
-            ["sub"] = userId.ToString(),
-            ["rol"] = RoleNames.Funcionario,
-            ["jti"] = Guid.NewGuid().ToString("N"),
-        };
-        if (includeSid)
-            claims["sid"] = Guid.NewGuid().ToString();
-        var now = factory.Time.Now.UtcDateTime;
-        return new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
-        {
-            Claims = claims,
-            IssuedAt = now,
-            NotBefore = now,
-            Expires = now.AddMinutes(15),
-            SigningCredentials = new SigningCredentials(
-                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)), SecurityAlgorithms.HmacSha256),
-        });
     }
 }

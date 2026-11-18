@@ -60,6 +60,23 @@ public sealed class LogoutTests(FakeTimeApiFactory factory) : IClassFixture<Fake
     }
 
     [Fact]
+    public async Task Logout_con_firma_falsa_no_revoca_la_sesion()
+    {
+        var user = await TestUsers.CreateAsync(factory);
+        var real = await _client.LoginTokenAsync(user);
+        var claims = ForgedTokens.ClaimsOf(real);
+        var otraFirma = ForgedTokens.Signed(claims, factory.Time.Now, secret: "otro-secreto-distinto-de-32-bytes-o-mas!!");
+        var sinFirma = ForgedTokens.Unsigned(claims, factory.Time.Now);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await _client.PostWithTokenAsync(Logout, otraFirma)).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await _client.PostWithTokenAsync(Logout, sinFirma)).StatusCode);
+
+        await using var db = factory.NewDb();
+        Assert.Null((await db.UserSessions.SingleAsync(s => s.UserId == user.Id)).RevokedAt);
+        Assert.Equal(HttpStatusCode.OK, (await _client.PostWithTokenAsync(Renovar, real)).StatusCode);
+    }
+
+    [Fact]
     public async Task Logout_no_afecta_otra_sesion_del_mismo_usuario()
     {
         var user = await TestUsers.CreateAsync(factory);
