@@ -1,0 +1,36 @@
+1. Users
+
+Información de los usuarios registrados.
+Campo	Descripción
+Id	Identificador único
+Email	Correo electrónico
+PasswordHash	Contraseña cifrada mediante hash
+FirstName	Nombre
+LastName	Apellido
+IsEmailVerified	Correo verificado
+IsActive	Estado de la cuenta
+CreatedAt	Fecha de creación
+
+En una implementación con ASP.NET Core Identity, buena parte de estos campos ya son proporcionados por IdentityUser. No necesitas crear todo manualmente.
+
+2. Roles
+
+Define los niveles de acceso.
+Campo	Descripción
+Id	Identificador
+Name	Nombre del rol
+
+Ejemplos: Administrator, User.
+
+3. RefreshTokens / UserSessions
+
+Gestiona las sesiones persistentes.
+Campo	Descripción
+Id	Identificador
+UserId	Usuario asociado
+TokenHash	Hash del refresh token
+ExpiresAt	Fecha de expiración
+RevokedAt	Fecha de revocación
+CreatedAt	Fecha de creación
+
+El refresh token original no debe almacenarse en texto plano.
